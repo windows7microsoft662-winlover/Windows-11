@@ -1,0 +1,1329 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Windows 11 (HTML Demo)</title>
+  <style>
+    :root{
+      --bg0:#070a12;
+      --glass: rgba(255,255,255,.14);
+      --glass2: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.18);
+      --shadow: rgba(0,0,0,.45);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.72);
+      --accent: rgba(80,170,255,.75);
+      --accent2: rgba(120,255,190,.45);
+      --radius: 16px;
+      --radius2: 22px;
+      --taskbarH: 56px;
+      --font: "Segoe UI Variable","Segoe UI",system-ui,-apple-system,Arial;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; margin:0; overflow:hidden; font-family:var(--font); background:#000; color:var(--text); }
+    body{ user-select:none; }
+
+    /* Wallpaper */
+    #wallpaper{
+      position:fixed; inset:0; z-index:-4;
+      background:
+        radial-gradient(900px 520px at 25% 25%, rgba(80,170,255,.22), transparent 60%),
+        radial-gradient(900px 520px at 75% 30%, rgba(120,255,190,.16), transparent 60%),
+        radial-gradient(1000px 700px at 55% 85%, rgba(255,255,255,.08), transparent 65%),
+        linear-gradient(180deg, #0a1230 0%, #08111f 45%, #070a12 100%);
+      filter:saturate(110%);
+    }
+    #wallpaper.custom{
+      background:#000 center/cover no-repeat;
+    }
+    #wallpaperOverlay{
+      position:fixed; inset:0; z-index:-3; pointer-events:none;
+      background: radial-gradient(circle at 50% 35%, transparent 35%, rgba(0,0,0,.38) 100%);
+    }
+
+    .hidden{ display:none !important; }
+
+    /* Boot / Off / Shutdown */
+    #bootScreen{
+      position:fixed; inset:0; z-index:60000;
+      background:#000;
+      display:none;
+      place-items:center;
+    }
+    #bootScreen.open{ display:grid; }
+    .bootWrap{ display:flex; flex-direction:column; align-items:center; gap:20px; }
+    .winLogo{
+      width:90px; height:90px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.95) 0 0) left/42% 42% no-repeat,
+        linear-gradient(90deg, rgba(255,255,255,.95) 0 0) right/42% 42% no-repeat,
+        linear-gradient(90deg, rgba(255,255,255,.95) 0 0) left bottom/42% 42% no-repeat,
+        linear-gradient(90deg, rgba(255,255,255,.95) 0 0) right bottom/42% 42% no-repeat;
+      border-radius:10px;
+      filter: drop-shadow(0 10px 30px rgba(0,0,0,.55));
+      opacity:.96;
+    }
+    .spinner{
+      width:46px; height:46px; border-radius:999px;
+      border: 4px solid rgba(255,255,255,.18);
+      border-top-color: rgba(255,255,255,.88);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+    .bootText{ color: rgba(255,255,255,.78); font-size:14px; letter-spacing:.2px; }
+
+    #shutdownScreen{
+      position:fixed; inset:0; z-index:59000;
+      background:#000; display:none; place-items:center;
+    }
+    #shutdownScreen.open{ display:grid; }
+    .shutText{ color: rgba(255,255,255,.84); font-size:18px; letter-spacing:.2px; }
+
+    #powerOff{
+      position:fixed; inset:0; z-index:58000;
+      background:#000; display:none; place-items:center;
+    }
+    #powerOff.open{ display:grid; }
+    #bootPcBtn{
+      font-size: 22px; color: rgba(255,255,255,.92);
+      text-shadow: 0 2px 14px rgba(0,0,0,.85);
+      letter-spacing:.2px;
+      cursor:pointer;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(6px);
+      user-select:none;
+      min-width: 240px;
+      text-align:center;
+    }
+    #bootPcBtn:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.16); }
+    #bootPcBtn:active{ transform: translateY(1px); }
+    .caret{ display:inline-block; width:10px; margin-left:4px; opacity:.9; animation: blink 1s steps(1) infinite; }
+    @keyframes blink{ 50%{opacity:0;} }
+
+    /* Desktop */
+    #desktop{
+      position:absolute; inset:0 0 var(--taskbarH) 0;
+      padding:18px;
+    }
+    .iconGrid{
+      display:flex; flex-wrap:wrap; gap:12px; align-content:flex-start;
+      width: 340px;
+    }
+    .icon{
+      width:86px; display:flex; flex-direction:column; align-items:center; gap:8px;
+      padding:10px 8px; border-radius:14px;
+    }
+    .icon:hover{ background: rgba(255,255,255,.10); outline: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(8px); }
+    .glyph{
+      width:54px; height:54px; border-radius:16px; position:relative;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(255,255,255,.78), rgba(255,255,255,.12) 50%, rgba(0,0,0,.12) 78%),
+        linear-gradient(180deg, rgba(80,170,255,.22), rgba(0,0,0,.22));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 14px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.22);
+      overflow:hidden;
+    }
+    .glyph::after{
+      content:""; position:absolute; left:-15%; top:-30%; width:130%; height:70%;
+      background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+      transform: rotate(12deg); opacity:.55;
+    }
+    .label{
+      font-size:12.5px; text-align:center;
+      color: rgba(255,255,255,.92);
+      text-shadow: 0 1px 2px rgba(0,0,0,.7);
+      line-height:1.15;
+      max-width: 90px;
+      word-wrap: break-word;
+    }
+
+    /* Windows */
+    #windows{ position:absolute; inset:0 0 var(--taskbarH) 0; pointer-events:none; }
+    .window{
+      position:absolute; width:560px; height:360px;
+      border-radius: var(--radius2);
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 22px 60px var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+      overflow:hidden;
+      pointer-events:auto;
+    }
+    .window.focused{ border-color: rgba(255,255,255,.28); box-shadow: 0 28px 70px rgba(0,0,0,.55); }
+    .titlebar{
+      height:44px;
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      background: rgba(0,0,0,.10);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      cursor:grab;
+    }
+    .titlebar:active{ cursor:grabbing; }
+    .appDot{
+      width:12px; height:12px; border-radius:999px;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.9), rgba(255,255,255,.12) 55%, rgba(0,0,0,.15) 80%),
+                  linear-gradient(180deg, rgba(80,170,255,.35), rgba(0,0,0,.15));
+      border:1px solid rgba(255,255,255,.16);
+    }
+    .title{
+      flex:1; font-size:13px; color: rgba(255,255,255,.92);
+      text-shadow: 0 1px 2px rgba(0,0,0,.6);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .controls{ display:flex; gap:8px; }
+    .cbtn{
+      width:34px; height:24px; border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      display:grid; place-items:center;
+      cursor:pointer;
+    }
+    .cbtn:hover{ background: rgba(255,255,255,.12); }
+    .cbtn.close:hover{ background: rgba(255,80,80,.20); border-color: rgba(255,120,120,.22); }
+    .content{
+      height: calc(100% - 44px);
+      padding: 14px;
+      background: rgba(0,0,0,.10);
+      overflow:auto;
+    }
+    .card{
+      border-radius: 18px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      padding: 14px;
+    }
+    .h{
+      margin:0 0 6px;
+      font-size: 18px;
+      letter-spacing:.2px;
+    }
+    .p{ margin:0; color: var(--muted); font-size: 13px; line-height:1.25; }
+
+    /* Taskbar */
+    #taskbar{
+      position:absolute; left:0; right:0; bottom:0;
+      height: var(--taskbarH);
+      display:flex; align-items:center;
+      padding: 10px 12px;
+      gap: 10px;
+      background: rgba(15,15,18,.55);
+      border-top: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(18px) saturate(150%);
+      box-shadow: 0 -18px 50px rgba(0,0,0,.40);
+      z-index: 9999;
+    }
+    .tb-center{
+      position:absolute;
+      left:50%; transform: translateX(-50%);
+      display:flex; gap:10px; align-items:center;
+    }
+    .tb-left{
+      display:flex; gap:10px; align-items:center;
+    }
+    .tb-right{
+      margin-left:auto;
+      display:flex; gap:10px; align-items:center;
+    }
+    .orb{
+      width:40px; height:40px; border-radius:12px;
+      background: rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      display:grid; place-items:center;
+      cursor:pointer;
+    }
+    .orb:hover{ background: rgba(255,255,255,.14); }
+    .orb:active{ transform: translateY(1px); }
+
+    .pin{
+      width:40px; height:40px; border-radius:12px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      display:grid; place-items:center;
+      cursor:pointer;
+      position:relative;
+    }
+    .pin:hover{ background: rgba(255,255,255,.12); }
+    .pin.active{ outline: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.14); }
+    .pin .dot{
+      position:absolute; bottom:6px; width:8px; height:2px; border-radius:999px;
+      background: rgba(255,255,255,.78);
+      opacity:.0;
+    }
+    .pin.running .dot{ opacity:.95; }
+
+    .clock{
+      font-size:12.5px; text-align:right; line-height:1.1;
+      color: rgba(255,255,255,.92);
+      text-shadow: 0 1px 2px rgba(0,0,0,.65);
+      min-width: 96px;
+      cursor:default;
+    }
+    .trayBtn{
+      width:40px; height:40px; border-radius:12px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      display:grid; place-items:center;
+      cursor:pointer;
+    }
+    .trayBtn:hover{ background: rgba(255,255,255,.12); }
+    .trayBtn.active{ outline: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.14); }
+
+    /* Start menu */
+    #startMenu{
+      position:absolute;
+      left:50%; transform: translateX(-50%);
+      bottom: calc(var(--taskbarH) + 12px);
+      width: 520px; height: 520px;
+      border-radius: 26px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+      backdrop-filter: blur(20px) saturate(160%);
+      display:none;
+      overflow:hidden;
+      z-index: 12000;
+    }
+    #startMenu.open{ display:block; }
+    .startTop{
+      padding: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.10);
+      display:flex; gap:10px; align-items:center;
+    }
+    .search{
+      flex:1; display:flex; gap:10px; align-items:center;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .search input{
+      width:100%; border:none; outline:none; background:transparent;
+      color: rgba(255,255,255,.92);
+      font-size: 13px;
+    }
+    .startBody{ padding: 14px; }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .appTile{
+      height: 78px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap: 8px;
+      cursor:pointer;
+    }
+    .appTile:hover{ background: rgba(255,255,255,.10); }
+    .tileIcon{
+      width: 34px; height: 34px; border-radius: 12px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.12);
+      display:grid; place-items:center;
+      font-size: 16px;
+    }
+    .tileLabel{ font-size: 12px; color: rgba(255,255,255,.90); }
+    .startBottom{
+      position:absolute; left:0; right:0; bottom:0;
+      padding: 14px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.10);
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .user{
+      display:flex; gap:10px; align-items:center;
+      padding: 8px 10px; border-radius: 16px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .avatar{
+      width: 28px; height: 28px; border-radius: 10px;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.9), rgba(255,255,255,.12) 55%, rgba(0,0,0,.18) 80%),
+                  linear-gradient(180deg, rgba(80,170,255,.28), rgba(0,0,0,.18));
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .user small{ color: var(--muted); display:block; margin-top:2px; }
+    .powerBtn{
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      cursor:pointer;
+    }
+    .powerBtn:hover{ background: rgba(255,255,255,.12); }
+
+    /* Quick Settings (Wi-Fi + Sound) */
+    #quick{
+      position:absolute;
+      right: 12px;
+      bottom: calc(var(--taskbarH) + 12px);
+      width: 360px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+      backdrop-filter: blur(20px) saturate(160%);
+      padding: 12px;
+      display:none;
+      z-index: 12000;
+    }
+    #quick.open{ display:block; }
+    .qTop{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+    .chip{
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.14);
+      border:1px solid rgba(255,255,255,.10);
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+    }
+    .qRow{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      margin: 10px 0;
+    }
+    .toggle{
+      width: 48px; height: 26px; border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.16);
+      position:relative;
+      cursor:pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+      flex:0 0 auto;
+    }
+    .toggle::after{
+      content:"";
+      position:absolute; top:3px; left:3px;
+      width: 20px; height: 20px; border-radius:999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(0,0,0,.10));
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 8px 16px rgba(0,0,0,.30);
+      transition: transform .16s ease;
+    }
+    .toggle.on{
+      background: linear-gradient(180deg, rgba(80,170,255,.35), rgba(0,0,0,.10));
+      border-color: rgba(255,255,255,.20);
+    }
+    .toggle.on::after{ transform: translateX(22px); }
+
+    .sliderWrap{ display:flex; align-items:center; gap:10px; width:100%; }
+    input[type="range"]{
+      -webkit-appearance:none;
+      width:100%; height:6px; border-radius:999px;
+      background: rgba(255,255,255,.18);
+      outline:none;
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      width:18px; height:18px; border-radius:999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.90), rgba(0,0,0,.10));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      cursor:pointer;
+    }
+
+    .list{
+      margin-top:10px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.10);
+      border: 1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+    }
+    .net{
+      padding: 10px 10px;
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      cursor:pointer;
+    }
+    .net:first-child{ border-top:none; }
+    .net:hover{ background: rgba(255,255,255,.08); }
+    .net b{ font-size: 12.8px; }
+    .net small{ color: var(--muted); font-size: 12px; }
+    .badge{
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      white-space:nowrap;
+    }
+
+    /* Power dialog */
+    #modal{
+      position:fixed; inset:0; z-index:20000;
+      display:none;
+      background: rgba(0,0,0,.40);
+      backdrop-filter: blur(6px);
+    }
+    #modal.open{ display:block; }
+    .dlg{
+      position:absolute;
+      left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width: 420px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 30px 90px rgba(0,0,0,.65);
+      backdrop-filter: blur(20px) saturate(160%);
+      overflow:hidden;
+    }
+    .dlgTop{
+      padding: 12px 14px;
+      background: rgba(0,0,0,.10);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .dlgBody{ padding: 14px; }
+    .dlgBody p{ margin:0 0 12px; font-size: 13px; color: rgba(255,255,255,.88); }
+    .choices{ display:flex; gap:10px; flex-wrap:wrap; }
+    .choice{
+      flex:1; min-width: 120px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.10);
+      border:1px solid rgba(255,255,255,.10);
+      cursor:pointer;
+    }
+    .choice:hover{ background: rgba(255,255,255,.08); }
+    .choice:active{ transform: translateY(1px); }
+    .dlgActions{
+      padding: 12px 14px;
+      background: rgba(0,0,0,.08);
+      border-top: 1px solid rgba(255,255,255,.10);
+      display:flex; justify-content:flex-end;
+    }
+    .btn{
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      cursor:pointer;
+      color: rgba(255,255,255,.90);
+      font-size: 13px;
+    }
+    .btn:hover{ background: rgba(255,255,255,.12); }
+
+    /* Context menu (simple Win11 style) */
+    #ctx{
+      position:fixed;
+      min-width: 260px;
+      border-radius: 18px;
+      padding: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 30px 90px rgba(0,0,0,.65);
+      backdrop-filter: blur(20px) saturate(160%);
+      display:none;
+      z-index: 30000;
+    }
+    #ctx.open{ display:block; }
+    .ctxItem{
+      display:flex; gap:10px; align-items:center;
+      padding: 10px 10px;
+      border-radius: 14px;
+      cursor:pointer;
+      border:1px solid transparent;
+      font-size: 13px;
+      color: rgba(255,255,255,.92);
+    }
+    .ctxItem:hover{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.10); }
+    .ctxSep{ height:1px; background: rgba(255,255,255,.12); margin: 8px 8px; }
+    .ctxIc{
+      width: 22px; height: 22px; border-radius: 10px;
+      display:grid; place-items:center;
+      background: rgba(0,0,0,.14);
+      border:1px solid rgba(255,255,255,.10);
+      font-size: 13px;
+    }
+
+    /* small hint toast */
+    #toast{
+      position:fixed;
+      left:50%; bottom: 86px;
+      transform: translateX(-50%);
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(15,15,18,.68);
+      border:1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.55);
+      display:none;
+      z-index: 40000;
+      font-size: 13px;
+      color: rgba(255,255,255,.92);
+    }
+    #toast.open{ display:block; }
+  </style>
+</head>
+<body>
+  <div id="wallpaper"></div>
+  <div id="wallpaperOverlay"></div>
+
+  <div id="bootScreen" aria-hidden="true">
+    <div class="bootWrap">
+      <div class="winLogo" aria-hidden="true"></div>
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="bootText" id="bootText">Starting...</div>
+    </div>
+  </div>
+
+  <div id="shutdownScreen" aria-hidden="true">
+    <div class="bootWrap">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="shutText" id="shutText">Shutting down</div>
+    </div>
+  </div>
+
+  <div id="powerOff" aria-hidden="true">
+    <div id="bootPcBtn" title="Click to boot">
+      <span id="bootMsg"></span><span class="caret">█</span>
+    </div>
+  </div>
+
+  <div id="desktop">
+    <div class="iconGrid">
+      <div class="icon" data-open="explorer"><div class="glyph"></div><div class="label">File Explorer</div></div>
+      <div class="icon" data-open="edge"><div class="glyph"></div><div class="label">Microsoft Edge</div></div>
+      <div class="icon" data-open="settings"><div class="glyph"></div><div class="label">Settings</div></div>
+      <div class="icon" data-open="about"><div class="glyph"></div><div class="label">About</div></div>
+    </div>
+  </div>
+
+  <div id="windows"></div>
+
+  <div id="startMenu" role="dialog" aria-label="Start">
+    <div class="startTop">
+      <div class="search">
+        <span style="opacity:.85">🔎</span>
+        <input id="startSearch" placeholder="Type here to search" />
+      </div>
+    </div>
+    <div class="startBody">
+      <div class="grid" id="startGrid">
+        <div class="appTile" data-open="explorer"><div class="tileIcon">📁</div><div class="tileLabel">Explorer</div></div>
+        <div class="appTile" data-open="edge"><div class="tileIcon">🌐</div><div class="tileLabel">Edge</div></div>
+        <div class="appTile" data-open="settings"><div class="tileIcon">⚙️</div><div class="tileLabel">Settings</div></div>
+        <div class="appTile" data-open="about"><div class="tileIcon">ℹ️</div><div class="tileLabel">About</div></div>
+        <div class="appTile" data-open="notes"><div class="tileIcon">🗒️</div><div class="tileLabel">Notes</div></div>
+        <div class="appTile" data-open="terminal"><div class="tileIcon">⌨️</div><div class="tileLabel">Terminal</div></div>
+      </div>
+    </div>
+    <div class="startBottom">
+      <div class="user">
+        <div class="avatar"></div>
+        <div>
+          <div style="font-size:13px;">User</div>
+          <small>Windows 11 demo</small>
+        </div>
+      </div>
+      <div class="powerBtn" id="powerMenuBtn">Power</div>
+    </div>
+  </div>
+
+  <div id="quick" role="dialog" aria-label="Quick settings">
+    <div class="qTop">
+      <div style="font-weight:600;">Quick Settings</div>
+      <div class="chip" id="wifiChip">Wi-Fi: On</div>
+    </div>
+
+    <div class="qRow">
+      <div style="display:flex; flex-direction:column;">
+        <div style="font-size:13px;">Wi-Fi</div>
+        <div style="font-size:12px; color:var(--muted);" id="wifiHint">Networks available</div>
+      </div>
+      <div class="toggle on" id="wifiToggle" title="Wi-Fi On/Off"></div>
+    </div>
+
+    <div class="list" id="wifiList"></div>
+
+    <div class="qRow" style="margin-top:12px;">
+      <div style="display:flex; flex-direction:column;">
+        <div style="font-size:13px;">Sound</div>
+        <div style="font-size:12px; color:var(--muted);" id="muteState">Not muted</div>
+      </div>
+      <div class="chip" id="volChip">70%</div>
+    </div>
+
+    <div class="qRow" style="margin-top:0;">
+      <div class="sliderWrap">
+        <span>🔈</span>
+        <input id="volSlider" type="range" min="0" max="100" value="70" />
+        <span>🔊</span>
+      </div>
+    </div>
+
+    <div class="qRow">
+      <button class="btn" id="muteBtn">Mute</button>
+      <div style="font-size:12px; color:var(--muted);" id="wifiConnected">Not connected</div>
+    </div>
+  </div>
+
+  <div id="taskbar" aria-label="Taskbar">
+    <div class="tb-left"></div>
+
+    <div class="tb-center">
+      <div class="orb" id="startBtn" title="Start">⊞</div>
+      <div class="pin" data-open="explorer" title="File Explorer"><span>📁</span><span class="dot"></span></div>
+      <div class="pin" data-open="edge" title="Edge"><span>🌐</span><span class="dot"></span></div>
+      <div class="pin" data-open="settings" title="Settings"><span>⚙️</span><span class="dot"></span></div>
+    </div>
+
+    <div class="tb-right">
+      <div class="trayBtn" id="quickBtn" title="Network & Sound">📶🔊</div>
+      <div class="clock" id="clock"></div>
+    </div>
+  </div>
+
+  <div id="modal" aria-hidden="true">
+    <div class="dlg" role="dialog" aria-label="Power">
+      <div class="dlgTop">
+        <b>Power</b>
+        <span class="chip">Windows 11</span>
+      </div>
+      <div class="dlgBody">
+        <p>What do you want the computer to do?</p>
+        <div class="choices">
+          <div class="choice" data-p="shutdown">
+            <div style="font-weight:600;">Shut down</div>
+            <div style="font-size:12px; color:var(--muted); margin-top:4px;">Turn off this PC.</div>
+          </div>
+          <div class="choice" data-p="restart">
+            <div style="font-weight:600;">Restart</div>
+            <div style="font-size:12px; color:var(--muted); margin-top:4px;">Restart Windows.</div>
+          </div>
+        </div>
+      </div>
+      <div class="dlgActions">
+        <button class="btn" id="cancelPower">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ctx" role="menu" aria-label="Context menu">
+    <div class="ctxItem" data-ctx="refresh"><div class="ctxIc">🔄</div>Refresh</div>
+    <div class="ctxItem" data-ctx="wallpaper"><div class="ctxIc">🖼️</div>Wallpaper (toggle custom)</div>
+    <div class="ctxSep"></div>
+    <div class="ctxItem" data-ctx="about"><div class="ctxIc">ℹ️</div>About</div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // =====================
+    //  CONFIG
+    // =====================
+    const OS_NAME = "Windows 11";
+    const WIFI_PASS = "win11";
+
+    // Optional files next to index.html:
+    // - win11-wall.jpg     (custom wallpaper)
+    // - win11.ogv  (startup sound only)
+    const CUSTOM_WALL = "win11-wall.jpg";
+    const STARTUP_SOUND = "win11-startup.mp3";
+
+    const wifi = {
+      on: true,
+      connected: null,
+      networks: [
+        { name: "Varka Free Wifi", sec: "WPA2", strength: "Excellent", pass: WIFI_PASS },
+        { name: "msadif",         sec: "WPA2", strength: "Fair",      pass: WIFI_PASS },
+        { name: "wireless",      sec: "WPA2", strength: "Good",      pass: WIFI_PASS },
+      ]
+    };
+
+    const audioUI = { volume: 70, muted: false, lastVolume: 70 };
+
+    // =====================
+    //  Helpers
+    // =====================
+    const $ = (id) => document.getElementById(id);
+
+    const wallpaperEl = $("wallpaper");
+    const desktopEl = $("desktop");
+    const windowsEl = $("windows");
+    const taskbarEl = $("taskbar");
+
+    const startBtn = $("startBtn");
+    const startMenu = $("startMenu");
+    const startSearch = $("startSearch");
+
+    const quickBtn = $("quickBtn");
+    const quick = $("quick");
+    const wifiToggle = $("wifiToggle");
+    const wifiChip = $("wifiChip");
+    const wifiHint = $("wifiHint");
+    const wifiList = $("wifiList");
+    const wifiConnected = $("wifiConnected");
+
+    const volSlider = $("volSlider");
+    const volChip = $("volChip");
+    const muteBtn = $("muteBtn");
+    const muteState = $("muteState");
+
+    const modal = $("modal");
+    const powerMenuBtn = $("powerMenuBtn");
+    const cancelPower = $("cancelPower");
+
+    const bootScreen = $("bootScreen");
+    const shutdownScreen = $("shutdownScreen");
+    const powerOff = $("powerOff");
+    const bootMsg = $("bootMsg");
+    const bootPcBtn = $("bootPcBtn");
+
+    const ctx = $("ctx");
+    const toast = $("toast");
+
+    function showToast(msg){
+      toast.textContent = msg;
+      toast.classList.add("open");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(()=>toast.classList.remove("open"), 1300);
+    }
+
+    async function tryPlay(aud){
+      try{ aud.currentTime = 0; await aud.play(); return true; } catch { return false; }
+    }
+
+    let startupPlayed = false;
+    async function playStartupOnceFromGesture(){
+      if(startupPlayed) return true;
+      const a = new Audio(STARTUP_SOUND);
+      a.preload = "auto";
+      a.volume = 0.9;
+      const ok = await tryPlay(a);
+      if(ok) startupPlayed = true;
+      return ok;
+    }
+
+    // =====================
+    //  Boot / Shutdown flow
+    // =====================
+    function setUIVisible(v){
+      desktopEl.classList.toggle("hidden", !v);
+      windowsEl.classList.toggle("hidden", !v);
+      taskbarEl.classList.toggle("hidden", !v);
+      startMenu.classList.remove("open");
+      quick.classList.remove("open");
+      quickBtn.classList.remove("active");
+    }
+
+    function typeBootText(){
+      const msg = "Boot up PC";
+      bootMsg.textContent = "";
+      let i = 0;
+      clearInterval(typeBootText._t);
+      typeBootText._t = setInterval(()=>{
+        bootMsg.textContent = msg.slice(0, i);
+        i++;
+        if(i > msg.length) clearInterval(typeBootText._t);
+      }, 65);
+    }
+
+    function startBoot(ms=2800){
+      powerOff.classList.remove("open");
+      bootScreen.classList.add("open");
+      setUIVisible(false);
+
+      setTimeout(()=>{
+        bootScreen.classList.remove("open");
+        setUIVisible(true);
+      }, ms);
+    }
+
+    function startShutdown(){
+      // No shutdown sound in Win11 default -> so we don't play any sound.
+      modal.classList.remove("open");
+      startMenu.classList.remove("open");
+      quick.classList.remove("open");
+      quickBtn.classList.remove("active");
+
+      setUIVisible(false);
+      shutdownScreen.classList.add("open");
+
+      setTimeout(()=>{
+        shutdownScreen.classList.remove("open");
+        powerOff.classList.add("open");
+        typeBootText();
+      }, 2400);
+    }
+
+    function startRestart(){
+      modal.classList.remove("open");
+      setUIVisible(false);
+      shutdownScreen.classList.add("open");
+
+      setTimeout(()=>{
+        shutdownScreen.classList.remove("open");
+        powerOff.classList.add("open");
+        typeBootText();
+      }, 1400);
+    }
+
+    // initial state = powered off
+    setUIVisible(false);
+    powerOff.classList.add("open");
+    typeBootText();
+
+    bootPcBtn.addEventListener("click", async () => {
+      await playStartupOnceFromGesture();
+      startBoot(2800);
+    });
+
+    // enter to boot
+    window.addEventListener("keydown", async (e)=>{
+      if(e.key === "Enter" && powerOff.classList.contains("open")){
+        await playStartupOnceFromGesture();
+        startBoot(2800);
+      }
+    });
+
+    // =====================
+    //  Clock
+    // =====================
+    const clockEl = $("clock");
+    function tick(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      const day = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
+      clockEl.innerHTML = `${hh}:${mm}<br><span style="font-size:12px; color:rgba(255,255,255,.72)">${day}</span>`;
+    }
+    setInterval(tick, 1000); tick();
+
+    // =====================
+    //  Wallpaper toggle (default gradient <-> custom file)
+    // =====================
+    let customOn = false;
+    function applyWallpaper(){
+      if(customOn){
+        const bust = Date.now();
+        wallpaperEl.classList.add("custom");
+        wallpaperEl.style.background = `#000 url("${CUSTOM_WALL}?v=${bust}") center/cover no-repeat`;
+      } else {
+        wallpaperEl.classList.remove("custom");
+        wallpaperEl.removeAttribute("style");
+      }
+    }
+    applyWallpaper();
+
+    // =====================
+    //  Windows system (simple)
+    // =====================
+    let z = 10;
+    const state = { map: new Map() };
+
+    const templates = {
+      explorer: { title:"File Explorer", body:() => `
+        <div class="card">
+          <h3 class="h">File Explorer</h3>
+          <p class="p">This is a Windows 11 HTML desktop demo.</p>
+          <p class="p" style="margin-top:10px;">Quick tip: open Quick Settings (📶🔊) to connect Wi-Fi (password: <b>${WIFI_PASS}</b>).</p>
+        </div>
+      `},
+      edge: { title:"Microsoft Edge", body:() => `
+        <div class="card">
+          <h3 class="h">Microsoft Edge</h3>
+          <p class="p">Fake browser UI (demo).</p>
+          <div class="card" style="margin-top:12px;">
+            <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Address bar</div>
+            <input value="https://www.microsoft.com" style="width:100%; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: rgba(255,255,255,.92); outline:none;" />
+          </div>
+        </div>
+      `},
+      settings: { title:"Settings", body:() => `
+        <div class="card">
+          <h3 class="h">Settings</h3>
+          <p class="p">Wi-Fi and sound are in Quick Settings (bottom right).</p>
+          <p class="p" style="margin-top:10px;">Wallpaper: Right-click desktop → Wallpaper (toggle custom).</p>
+        </div>
+      `},
+      notes: { title:"Notes", body:() => `
+        <div class="card">
+          <h3 class="h">Notes</h3>
+          <p class="p">Wi-Fi Pass: <b>${WIFI_PASS}</b></p>
+          <textarea style="margin-top:10px; width:100%; height:180px; resize:none; border-radius:16px; padding:12px; border:1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.10); color: rgba(255,255,255,.92); outline:none; font-family:inherit; font-size:13px;">✅ Windows 11 demo
+- Start menu centered
+- Quick settings Wi-Fi + volume
+- Boot sound only (Win11 default)
+- Wi-Fi password prompt</textarea>
+        </div>
+      `},
+      terminal: { title:"Terminal", body:() => `
+        <div class="card">
+          <h3 class="h">Terminal</h3>
+          <p class="p">Not a real terminal — just vibes.</p>
+          <div class="card" style="margin-top:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px;">
+            <div>C:\\Users\\User&gt; <span style="color:rgba(120,255,190,.9)">echo</span> hello</div>
+            <div>hello</div>
+            <div style="margin-top:8px;">C:\\Users\\User&gt; <span style="color:rgba(120,255,190,.9)">ipconfig</span></div>
+            <div>Wireless LAN adapter Wi-Fi: ${wifi.on ? "Connected" : "Media disconnected"}</div>
+          </div>
+        </div>
+      `},
+      about: { title:"About", body:() => `
+        <div class="card">
+          <h3 class="h">${OS_NAME}</h3>
+          <p class="p">Single-file HTML desktop (GitHub Pages friendly).</p>
+          <p class="p" style="margin-top:10px;"><b>Wi-Fi Pass:</b> ${WIFI_PASS}</p>
+          <p class="p"><b>Networks:</b> Varka Free Wifi / msadif / wireless</p>
+          <p class="p"><b>Startup sound:</b> ${STARTUP_SOUND} (plays only after first click)</p>
+        </div>
+      `}
+    };
+
+    function focus(id){
+      const obj = state.map.get(id);
+      if(!obj) return;
+      z++;
+      obj.el.style.zIndex = z;
+      for(const [wid,w] of state.map){
+        w.el.classList.toggle("focused", wid === id);
+        w.pin.classList.toggle("active", wid === id);
+      }
+    }
+
+    function closeWin(id){
+      const obj = state.map.get(id);
+      if(!obj) return;
+      obj.el.remove();
+      obj.pin.classList.remove("running");
+      obj.pin.classList.remove("active");
+      state.map.delete(id);
+    }
+
+    function enableDrag(winEl, handleEl, id){
+      let startX=0,startY=0,startL=0,startT=0,drag=false;
+      handleEl.addEventListener("mousedown",(e)=>{
+        drag=true;
+        focus(id);
+        const r = winEl.getBoundingClientRect();
+        startX=e.clientX; startY=e.clientY;
+        startL=r.left; startT=r.top;
+
+        const move=(ev)=>{
+          if(!drag) return;
+          const dx=ev.clientX-startX;
+          const dy=ev.clientY-startY;
+          winEl.style.left = Math.max(8, startL+dx) + "px";
+          winEl.style.top  = Math.max(8, startT+dy) + "px";
+        };
+        const up=()=>{
+          drag=false;
+          window.removeEventListener("mousemove",move);
+          window.removeEventListener("mouseup",up);
+        };
+        window.addEventListener("mousemove",move);
+        window.addEventListener("mouseup",up);
+      });
+    }
+
+    function openApp(app){
+      // If already open, just focus
+      for(const [id,obj] of state.map){
+        if(obj.app === app){
+          obj.el.classList.remove("hidden");
+          focus(id);
+          return;
+        }
+      }
+      const tpl = templates[app] || templates.about;
+      const id = app + "-" + Math.random().toString(16).slice(2);
+
+      const w = document.createElement("div");
+      w.className="window focused";
+      w.style.left = (80 + Math.random()*220) + "px";
+      w.style.top  = (70 + Math.random()*140) + "px";
+      w.style.zIndex = (++z);
+      w.innerHTML = `
+        <div class="titlebar">
+          <div class="appDot"></div>
+          <div class="title">${tpl.title}</div>
+          <div class="controls">
+            <div class="cbtn" data-act="min" title="Minimize">—</div>
+            <div class="cbtn close" data-act="close" title="Close">✕</div>
+          </div>
+        </div>
+        <div class="content">${tpl.body()}</div>
+      `;
+      windowsEl.appendChild(w);
+
+      const pin = document.querySelector(`.pin[data-open="${app}"]`);
+      if(pin) pin.classList.add("running");
+
+      state.map.set(id, { el:w, app, pin });
+
+      w.addEventListener("mousedown", ()=>focus(id));
+      w.querySelector('[data-act="close"]').addEventListener("click",(e)=>{ e.stopPropagation(); closeWin(id); });
+      w.querySelector('[data-act="min"]').addEventListener("click",(e)=>{ e.stopPropagation(); w.classList.add("hidden"); pin?.classList.remove("active"); });
+
+      enableDrag(w, w.querySelector(".titlebar"), id);
+      focus(id);
+    }
+
+    // Desktop double click to open
+    let last = { t:0, el:null };
+    document.querySelectorAll(".icon").forEach(ic=>{
+      ic.addEventListener("click", ()=>{
+        const now = Date.now();
+        if(last.el === ic && (now-last.t) < 350){
+          openApp(ic.getAttribute("data-open"));
+          last = { t:0, el:null };
+        } else {
+          last = { t:now, el:ic };
+        }
+      });
+    });
+
+    // Taskbar pinned apps
+    document.querySelectorAll(".pin[data-open]").forEach(p=>{
+      p.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const app = p.getAttribute("data-open");
+        openApp(app);
+      });
+    });
+
+    // =====================
+    //  Start menu
+    // =====================
+    function toggleStart(force){
+      const open = (typeof force === "boolean") ? force : !startMenu.classList.contains("open");
+      startMenu.classList.toggle("open", open);
+      if(open){
+        quick.classList.remove("open");
+        quickBtn.classList.remove("active");
+        ctx.classList.remove("open");
+        setTimeout(()=>startSearch.focus(),0);
+      }
+    }
+    startBtn.addEventListener("click",(e)=>{ e.stopPropagation(); toggleStart(); });
+
+    startMenu.addEventListener("click",(e)=>e.stopPropagation());
+    $("startGrid").addEventListener("click",(e)=>{
+      const t = e.target.closest(".appTile");
+      if(!t) return;
+      const app = t.getAttribute("data-open");
+      toggleStart(false);
+      openApp(app);
+    });
+
+    startSearch.addEventListener("input", ()=>{
+      const q = startSearch.value.trim().toLowerCase();
+      document.querySelectorAll(".appTile").forEach(t=>{
+        const name = t.innerText.toLowerCase();
+        t.style.display = name.includes(q) ? "" : "none";
+      });
+    });
+
+    // =====================
+    //  Quick settings
+    // =====================
+    function renderSound(){
+      volSlider.value = String(audioUI.volume);
+      volChip.textContent = `${audioUI.muted ? 0 : audioUI.volume}%`;
+      muteState.textContent = audioUI.muted ? "Muted" : "Not muted";
+    }
+
+    function renderWifi(){
+      wifiToggle.classList.toggle("on", wifi.on);
+      wifiChip.textContent = `Wi-Fi: ${wifi.on ? "On" : "Off"}`;
+      wifiHint.textContent = wifi.on ? "Networks available" : "Wi-Fi is turned off";
+      wifiConnected.textContent = wifi.connected ? `Connected: ${wifi.connected}` : "Not connected";
+
+      wifiList.innerHTML = "";
+      if(!wifi.on){
+        wifiList.innerHTML = `
+          <div class="net" style="cursor:default;">
+            <div><b>Wi-Fi is Off</b><br><small>Turn Wi-Fi on to see networks.</small></div>
+            <span class="badge">Off</span>
+          </div>`;
+        return;
+      }
+
+      wifi.networks.forEach(n=>{
+        const row = document.createElement("div");
+        row.className = "net";
+        row.innerHTML = `
+          <div>
+            <b>${n.name}</b><br>
+            <small>${n.sec} • ${n.strength}</small>
+          </div>
+          <span class="badge">${wifi.connected === n.name ? "Connected" : "Connect"}</span>
+        `;
+        row.addEventListener("click",(e)=>{
+          e.stopPropagation();
+          const pw = prompt(`Enter the network security key for "${n.name}"`);
+          if(pw === (n.pass || WIFI_PASS)){
+            wifi.connected = n.name;
+            showToast(`Connected to ${n.name}`);
+          } else {
+            alert("The network security key is incorrect.");
+          }
+          renderWifi();
+        });
+        wifiList.appendChild(row);
+      });
+    }
+
+    function toggleQuick(force){
+      const open = (typeof force === "boolean") ? force : !quick.classList.contains("open");
+      quick.classList.toggle("open", open);
+      quickBtn.classList.toggle("active", open);
+      if(open){
+        startMenu.classList.remove("open");
+        ctx.classList.remove("open");
+        renderWifi();
+        renderSound();
+      }
+    }
+    quickBtn.addEventListener("click",(e)=>{ e.stopPropagation(); toggleQuick(); });
+    quick.addEventListener("click",(e)=>e.stopPropagation());
+
+    wifiToggle.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      wifi.on = !wifi.on;
+      if(!wifi.on) wifi.connected = null;
+      renderWifi();
+    });
+
+    volSlider.addEventListener("input",(e)=>{
+      audioUI.volume = parseInt(e.target.value,10);
+      if(audioUI.volume > 0){ audioUI.lastVolume = audioUI.volume; audioUI.muted = false; }
+      renderSound();
+    });
+
+    muteBtn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      audioUI.muted = !audioUI.muted;
+      if(audioUI.muted){ audioUI.lastVolume = audioUI.volume; }
+      else { if(audioUI.volume === 0) audioUI.volume = audioUI.lastVolume || 50; }
+      renderSound();
+    });
+
+    // =====================
+    //  Power menu
+    // =====================
+    function openPower(){
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden","false");
+      startMenu.classList.remove("open");
+      quick.classList.remove("open");
+      quickBtn.classList.remove("active");
+      ctx.classList.remove("open");
+    }
+    function closePower(){
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden","true");
+    }
+    powerMenuBtn.addEventListener("click",(e)=>{ e.stopPropagation(); openPower(); });
+    cancelPower.addEventListener("click",(e)=>{ e.stopPropagation(); closePower(); });
+    modal.addEventListener("click",(e)=>{ if(e.target === modal) closePower(); });
+
+    modal.querySelectorAll(".choice").forEach(ch=>{
+      ch.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const k = ch.getAttribute("data-p");
+        if(k === "shutdown") startShutdown();
+        if(k === "restart") startRestart();
+      });
+    });
+
+    // =====================
+    //  Context menu
+    // =====================
+    function openCtx(x,y){
+      ctx.classList.add("open");
+      requestAnimationFrame(()=>{
+        const r = ctx.getBoundingClientRect();
+        const pad = 10;
+        const nx = Math.min(window.innerWidth - r.width - pad, Math.max(pad, x));
+        const ny = Math.min(window.innerHeight - r.height - 80, Math.max(pad, y));
+        ctx.style.left = nx + "px";
+        ctx.style.top  = ny + "px";
+      });
+    }
+    function closeCtx(){ ctx.classList.remove("open"); }
+
+    window.addEventListener("contextmenu",(e)=>{
+      const blocked = e.target.closest("#taskbar,#startMenu,#quick,.window,#modal,#ctx");
+      if(!blocked){
+        e.preventDefault();
+        toggleStart(false);
+        toggleQuick(false);
+        openCtx(e.clientX, e.clientY);
+      } else {
+        closeCtx();
+      }
+    });
+    ctx.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const item = e.target.closest(".ctxItem");
+      if(!item) return;
+      const act = item.getAttribute("data-ctx");
+      if(act === "refresh"){
+        desktopEl.style.filter = "brightness(1.15)";
+        setTimeout(()=>desktopEl.style.filter="", 120);
+        showToast("Refreshed");
+        closeCtx();
+      }
+      if(act === "wallpaper"){
+        customOn = !customOn;
+        applyWallpaper();
+        showToast(customOn ? "Custom wallpaper on" : "Default wallpaper on");
+        closeCtx();
+      }
+      if(act === "about"){
+        openApp("about");
+        closeCtx();
+      }
+    });
+
+    // =====================
+    //  Global click / esc
+    // =====================
+    window.addEventListener("click", ()=>{
+      if(modal.classList.contains("open")) return;
+      toggleStart(false);
+      toggleQuick(false);
+      closeCtx();
+    });
+
+    window.addEventListener("keydown",(e)=>{
+      if(e.key === "Escape"){
+        closePower();
+        toggleStart(false);
+        toggleQuick(false);
+        closeCtx();
+      }
+    });
+
+    // =====================
+    //  First run: open About after boot
+    // =====================
+    // We'll open About once the UI is visible.
+    const _origSetUI = setUIVisible;
+    setUIVisible = function(v){
+      _origSetUI(v);
+      if(v && !setUIVisible._opened){
+        setUIVisible._opened = true;
+        openApp("about");
+        renderWifi();
+        renderSound();
+      }
+    };
+
+    // show hints
+    showToast("Tip: Click 'Boot up PC' to start (startup sound plays after click).");
+  </script>
+</body>
+</html>
