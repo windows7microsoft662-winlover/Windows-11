@@ -988,7 +988,11 @@
       obj.el.style.zIndex = z;
       for(const [wid,w] of state.map){
         w.el.classList.toggle("focused", wid === id);
-        w.pin.classList.toggle("active", wid === id);
+        if (w.pin) {
+  w.pin.classList.toggle("active", wid === id);
+} else {
+  console.warn("Missing taskbar pin for window:", wid, w);
+}
       }
     }
 
